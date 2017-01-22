@@ -10,14 +10,16 @@ import (
 // DigitalOcean account. It is implemented by *digitalocean_exporter.DigitalOceanService.
 type DigitalOceanSource interface {
 	Droplets() (map[DropletCounter]int, error)
+	FloatingIPs() (map[FlipCounter]int, error)
 	Volumes() (map[VolumeCounter]int, error)
 }
 
 // A DigitalOceanCollector is a Prometheus collector for metrics regarding
 // DigitalOcean.
 type DigitalOceanCollector struct {
-	Droplets *prometheus.Desc
-	Volumes  *prometheus.Desc
+	Droplets    *prometheus.Desc
+	FloatingIPs *prometheus.Desc
+	Volumes     *prometheus.Desc
 
 	dos DigitalOceanSource
 }
@@ -33,6 +35,12 @@ func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 			prometheus.BuildFQName(namespace, "droplets", "count"),
 			"Number of Droplets by region, size, and status.",
 			[]string{"region", "size", "status"},
+			nil,
+		),
+		FloatingIPs: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "floating_ips", "count"),
+			"Number of Floating IPs by region and status.",
+			[]string{"region", "status"},
 			nil,
 		),
 		Volumes: prometheus.NewDesc(
@@ -55,9 +63,9 @@ func (c *DigitalOceanCollector) collect(ch chan<- prometheus.Metric) (*prometheu
 	if count, err := c.collectVolumeCounts(ch); err != nil {
 		return count, err
 	}
-	// if desc, err := c.collectActiveDownloads(ch); err != nil {
-	//     return desc, err
-	// }
+	if count, err := c.collectFipsCounts(ch); err != nil {
+		return count, err
+	}
 
 	return nil, nil
 }
@@ -76,6 +84,25 @@ func (c *DigitalOceanCollector) collectDropletCounts(ch chan<- prometheus.Metric
 			d.region,
 			d.size,
 			d.status,
+		)
+	}
+
+	return nil, nil
+}
+
+func (c *DigitalOceanCollector) collectFipsCounts(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	fips, err := c.dos.FloatingIPs()
+	if err != nil {
+		return c.FloatingIPs, err
+	}
+
+	for fip, count := range fips {
+		ch <- prometheus.MustNewConstMetric(
+			c.FloatingIPs,
+			prometheus.GaugeValue,
+			float64(count),
+			fip.region,
+			fip.status,
 		)
 	}
 
