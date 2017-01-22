@@ -45,7 +45,7 @@ func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 		),
 		Volumes: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "volumes", "count"),
-			"Number of Volumes by region, size, and status.",
+			"Number of Volumes by region, size in GiB, and status.",
 			[]string{"region", "size", "status"},
 			nil,
 		),
