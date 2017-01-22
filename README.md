@@ -4,7 +4,7 @@
 
 Initially written as a way to explore Prometheus exporters, I am sharing
 it in the hope that it will be useful to others. Matt Layher's
-(`rtorrent_exporter`)[https://github.com/mdlayher/rtorrent_exporter] was
+[`rtorrent_exporter`](https://github.com/mdlayher/rtorrent_exporter) was
 a great help.
 
 ## Usage
