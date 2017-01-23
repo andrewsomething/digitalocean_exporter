@@ -7,7 +7,8 @@ import (
 )
 
 // A DigitalOceanSource is an interface which can retrieve information about a
-// DigitalOcean account. It is implemented by *digitalocean_exporter.DigitalOceanService.
+// resources in a DigitalOcean account. It is implemented by
+// *digitaloceanexporter.DigitalOceanService.
 type DigitalOceanSource interface {
 	Droplets() (map[DropletCounter]int, error)
 	FloatingIPs() (map[FlipCounter]int, error)
@@ -28,7 +29,7 @@ type DigitalOceanCollector struct {
 var _ prometheus.Collector = &DigitalOceanCollector{}
 
 // NewDigitalOceanCollector creates a new DigitalOceanCollector which collects
-// metrics about a DgitialOcean account.
+// metrics about resources in a DigitalOcean account.
 func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 	return &DigitalOceanCollector{
 		Droplets: prometheus.NewDesc(
@@ -55,7 +56,7 @@ func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 }
 
 // collect begins a metrics collection task for all metrics related to
-// a DigitalOcean account.
+// resources in a DigitalOcean account.
 func (c *DigitalOceanCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
 	if count, err := c.collectDropletCounts(ch); err != nil {
 		return count, err
@@ -141,8 +142,8 @@ func (c *DigitalOceanCollector) Describe(ch chan<- *prometheus.Desc) {
 	}
 }
 
-// Collect sends the metric values for each metric pertaining to the rTorrent
-// downloads to the provided prometheus Metric channel.
+// Collect sends the metric values for each metric pertaining to the DigitalOcean
+// resources to the provided prometheus Metric channel.
 func (c *DigitalOceanCollector) Collect(ch chan<- prometheus.Metric) {
 	if desc, err := c.collect(ch); err != nil {
 		log.Printf("[ERROR] failed collecting DigitalOcean metric %v: %v", desc, err)

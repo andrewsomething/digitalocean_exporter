@@ -1,27 +1,30 @@
 package digitaloceanexporter
 
 import (
-	//	"log"
 	"strconv"
 
 	"github.com/digitalocean/godo"
 )
 
+// DigitalOceanService is a wrapper around godo.Client.
 type DigitalOceanService struct {
 	C *godo.Client
 }
 
+// DropletCounter is a struct holding information about a Droplet.
 type DropletCounter struct {
 	status string
 	region string
 	size   string
 }
 
+// FlipCounter is a struct holding information about a Floating IP.
 type FlipCounter struct {
 	status string
 	region string
 }
 
+// VolumeCounter is a struct holding information about a Block Storage Volume.
 type VolumeCounter struct {
 	status string
 	region string
@@ -33,6 +36,7 @@ var pageOpt = &godo.ListOptions{
 	PerPage: 200,
 }
 
+// Droplets retrieves a count of Droplets grouped by status, size, and region.
 func (s *DigitalOceanService) Droplets() (map[DropletCounter]int, error) {
 	droplets, _, err := s.C.Droplets.List(pageOpt)
 
@@ -50,6 +54,7 @@ func (s *DigitalOceanService) Droplets() (map[DropletCounter]int, error) {
 	return counters, err
 }
 
+// FloatingIPs retrieves a count of Floating IPs grouped by status and region.
 func (s *DigitalOceanService) FloatingIPs() (map[FlipCounter]int, error) {
 	fips, _, err := s.C.FloatingIPs.List(pageOpt)
 
@@ -74,6 +79,7 @@ func (s *DigitalOceanService) FloatingIPs() (map[FlipCounter]int, error) {
 	return counters, err
 }
 
+// Volumes retrieves a count of Volumes grouped by status, size, and region.
 func (s *DigitalOceanService) Volumes() (map[VolumeCounter]int, error) {
 	volumes, _, err := s.C.Storage.ListVolumes(pageOpt)
 

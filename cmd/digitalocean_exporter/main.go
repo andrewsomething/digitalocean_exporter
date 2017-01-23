@@ -18,12 +18,12 @@ var (
 	apiToken    = flag.String("token", "", "DigitalOcean API token (read-only)")
 )
 
-// tokenSource holds an OAuth token.
+// TokenSource holds an OAuth token.
 type TokenSource struct {
 	AccessToken string
 }
 
-// token returns an OAuth token.
+// Token returns an OAuth token.
 func (t *TokenSource) Token() (*oauth2.Token, error) {
 	return &oauth2.Token{
 		AccessToken: t.AccessToken,

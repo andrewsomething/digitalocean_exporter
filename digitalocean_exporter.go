@@ -11,7 +11,7 @@ const (
 )
 
 // An Exporter is a Prometheus exporter for DigitalOcean metrics.
-// It wraps all rTorrent metrics collectors and provides a single global
+// It wraps all DigitalOcean metrics collectors and provides a single global
 // exporter which can serve metrics. It also ensures that the collection
 // is done in a thread-safe manner, the necessary requirement stated by
 // Prometheus. It implements the prometheus.Collector interface in order to
