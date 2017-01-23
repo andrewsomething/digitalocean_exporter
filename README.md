@@ -1,5 +1,5 @@
 # digitalocean_exporter
-[![Build Status](https://travis-ci.org/andrewsomething/digitalocean_exporter.svg)](https://travis-ci.org/andrewsomething/digitalocean_exporter)
+[![Build Status](https://travis-ci.org/andrewsomething/digitalocean_exporter.svg)](https://travis-ci.org/andrewsomething/digitalocean_exporter) | [![Go Report Card](https://goreportcard.com/badge/github.com/andrewsomething/digitalocean_exporter)](https://goreportcard.com/report/github.com/andrewsomething/digitalocean_exporter)
 
 
 `digitalocean_exporter` is a Prometheus exporter for DigitalOcean resources.
