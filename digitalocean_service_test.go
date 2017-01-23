@@ -1,4 +1,4 @@
-package digitalocean_exporter
+package digitaloceanexporter
 
 import (
 	"fmt"

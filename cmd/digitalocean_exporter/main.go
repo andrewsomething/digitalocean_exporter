@@ -41,7 +41,7 @@ func main() {
 	oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
 	c := godo.NewClient(oauthClient)
 
-	prometheus.MustRegister(digitalocean_exporter.New(&digitalocean_exporter.DigitalOceanService{c}))
+	prometheus.MustRegister(digitaloceanexporter.New(&digitaloceanexporter.DigitalOceanService{c}))
 
 	http.Handle(*metricsPath, prometheus.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
