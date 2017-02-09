@@ -38,7 +38,7 @@ var pageOpt = &godo.ListOptions{
 
 // Droplets retrieves a count of Droplets grouped by status, size, and region.
 func (s *DigitalOceanService) Droplets() (map[DropletCounter]int, error) {
-	droplets, _, err := s.C.Droplets.List(pageOpt)
+	droplets, err := listDroplets(s)
 
 	counters := make(map[DropletCounter]int)
 
@@ -54,9 +54,38 @@ func (s *DigitalOceanService) Droplets() (map[DropletCounter]int, error) {
 	return counters, err
 }
 
+func listDroplets(s *DigitalOceanService) ([]godo.Droplet, error) {
+	dropletList := []godo.Droplet{}
+
+	for {
+		droplets, resp, err := s.C.Droplets.List(pageOpt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		for _, d := range droplets {
+			dropletList = append(dropletList, d)
+		}
+
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			return nil, err
+		}
+
+		pageOpt.Page = page + 1
+	}
+
+	return dropletList, nil
+}
+
 // FloatingIPs retrieves a count of Floating IPs grouped by status and region.
 func (s *DigitalOceanService) FloatingIPs() (map[FlipCounter]int, error) {
-	fips, _, err := s.C.FloatingIPs.List(pageOpt)
+	fips, err := listFips(s)
 
 	counters := make(map[FlipCounter]int)
 
@@ -79,9 +108,38 @@ func (s *DigitalOceanService) FloatingIPs() (map[FlipCounter]int, error) {
 	return counters, err
 }
 
+func listFips(s *DigitalOceanService) ([]godo.FloatingIP, error) {
+	fipList := []godo.FloatingIP{}
+
+	for {
+		fips, resp, err := s.C.FloatingIPs.List(pageOpt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		for _, f := range fips {
+			fipList = append(fipList, f)
+		}
+
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			return nil, err
+		}
+
+		pageOpt.Page = page + 1
+	}
+
+	return fipList, nil
+}
+
 // Volumes retrieves a count of Volumes grouped by status, size, and region.
 func (s *DigitalOceanService) Volumes() (map[VolumeCounter]int, error) {
-	volumes, _, err := s.C.Storage.ListVolumes(pageOpt)
+	volumes, err := listVolumes(s)
 
 	counters := make(map[VolumeCounter]int)
 
@@ -103,4 +161,33 @@ func (s *DigitalOceanService) Volumes() (map[VolumeCounter]int, error) {
 	}
 
 	return counters, err
+}
+
+func listVolumes(s *DigitalOceanService) ([]godo.Volume, error) {
+	volumeList := []godo.Volume{}
+
+	for {
+		fips, resp, err := s.C.Storage.ListVolumes(pageOpt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		for _, f := range fips {
+			volumeList = append(volumeList, f)
+		}
+
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			return nil, err
+		}
+
+		pageOpt.Page = page + 1
+	}
+
+	return volumeList, nil
 }
