@@ -3,8 +3,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/andrewsomething/digitalocean_exporter"
 	"github.com/digitalocean/godo"
@@ -12,10 +15,16 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const (
+	version = "0.1-dev"
+	agent   = "andrewsomething/digitalocean_exporter"
+)
+
 var (
 	listenAddr  = flag.String("listen", "localhost:9292", "Listen address for DigitalOcean exporter")
 	metricsPath = flag.String("metrics-path", "/metrics", "URL path for surfacing metrics")
 	apiToken    = flag.String("token", "", "DigitalOcean API token (read-only)")
+	versionFlag = flag.Bool("v", false, "Prints current digitalocean_exporter version")
 )
 
 // TokenSource holds an OAuth token.
@@ -32,6 +41,10 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 
 func main() {
 	flag.Parse()
+	if *versionFlag {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	if *apiToken == "" {
 		log.Fatal("A DigitalOcean API token must be specified with '-token' flag")
@@ -40,6 +53,8 @@ func main() {
 	ts := &TokenSource{AccessToken: *apiToken}
 	oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
 	c := godo.NewClient(oauthClient)
+	ua := []string{agent, version}
+	c.UserAgent = strings.Join(ua, "/")
 
 	newExporter := digitaloceanexporter.New(&digitaloceanexporter.DigitalOceanService{C: c})
 	prometheus.MustRegister(newExporter)
