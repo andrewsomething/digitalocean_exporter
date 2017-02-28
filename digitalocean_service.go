@@ -1,6 +1,7 @@
 package digitaloceanexporter
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/digitalocean/godo"
@@ -55,10 +56,11 @@ func (s *DigitalOceanService) Droplets() (map[DropletCounter]int, error) {
 }
 
 func listDroplets(s *DigitalOceanService) ([]godo.Droplet, error) {
+	ctx := context.TODO()
 	dropletList := []godo.Droplet{}
 
 	for {
-		droplets, resp, err := s.C.Droplets.List(pageOpt)
+		droplets, resp, err := s.C.Droplets.List(ctx, pageOpt)
 
 		if err != nil {
 			return nil, err
@@ -109,10 +111,11 @@ func (s *DigitalOceanService) FloatingIPs() (map[FlipCounter]int, error) {
 }
 
 func listFips(s *DigitalOceanService) ([]godo.FloatingIP, error) {
+	ctx := context.TODO()
 	fipList := []godo.FloatingIP{}
 
 	for {
-		fips, resp, err := s.C.FloatingIPs.List(pageOpt)
+		fips, resp, err := s.C.FloatingIPs.List(ctx, pageOpt)
 
 		if err != nil {
 			return nil, err
@@ -164,17 +167,21 @@ func (s *DigitalOceanService) Volumes() (map[VolumeCounter]int, error) {
 }
 
 func listVolumes(s *DigitalOceanService) ([]godo.Volume, error) {
+	ctx := context.TODO()
 	volumeList := []godo.Volume{}
+	volumeParams := &godo.ListVolumeParams{
+		ListOptions: pageOpt,
+	}
 
 	for {
-		fips, resp, err := s.C.Storage.ListVolumes(pageOpt)
+		volumes, resp, err := s.C.Storage.ListVolumes(ctx, volumeParams)
 
 		if err != nil {
 			return nil, err
 		}
 
-		for _, f := range fips {
-			volumeList = append(volumeList, f)
+		for _, v := range volumes {
+			volumeList = append(volumeList, v)
 		}
 
 		if resp.Links == nil || resp.Links.IsLastPage() {
@@ -186,7 +193,7 @@ func listVolumes(s *DigitalOceanService) ([]godo.Volume, error) {
 			return nil, err
 		}
 
-		pageOpt.Page = page + 1
+		volumeParams.ListOptions.Page = page + 1
 	}
 
 	return volumeList, nil
