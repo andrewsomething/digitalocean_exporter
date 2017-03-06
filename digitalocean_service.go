@@ -25,6 +25,12 @@ type FlipCounter struct {
 	region string
 }
 
+// LoadBalancerCounter is a struct holding information about a Load Balancer.
+type LoadBalancerCounter struct {
+	status string
+	region string
+}
+
 // VolumeCounter is a struct holding information about a Block Storage Volume.
 type VolumeCounter struct {
 	status string
@@ -138,6 +144,53 @@ func listFips(s *DigitalOceanService) ([]godo.FloatingIP, error) {
 	}
 
 	return fipList, nil
+}
+
+// LoadBalancers retrieves a count of Load Balancers grouped by status and region.
+func (s *DigitalOceanService) LoadBalancers() (map[LoadBalancerCounter]int, error) {
+	lbs, err := listLoadBalancers(s)
+
+	counters := make(map[LoadBalancerCounter]int)
+
+	for _, lb := range lbs {
+		c := LoadBalancerCounter{
+			lb.Status,
+			lb.Region.Slug,
+		}
+		counters[c]++
+	}
+
+	return counters, err
+}
+
+func listLoadBalancers(s *DigitalOceanService) ([]godo.LoadBalancer, error) {
+	ctx := context.TODO()
+	lbList := []godo.LoadBalancer{}
+
+	for {
+		lbs, resp, err := s.C.LoadBalancers.List(ctx, pageOpt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		for _, lb := range lbs {
+			lbList = append(lbList, lb)
+		}
+
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			return nil, err
+		}
+
+		pageOpt.Page = page + 1
+	}
+
+	return lbList, nil
 }
 
 // Volumes retrieves a count of Volumes grouped by status, size, and region.

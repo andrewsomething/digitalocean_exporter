@@ -12,15 +12,17 @@ import (
 type DigitalOceanSource interface {
 	Droplets() (map[DropletCounter]int, error)
 	FloatingIPs() (map[FlipCounter]int, error)
+	LoadBalancers() (map[LoadBalancerCounter]int, error)
 	Volumes() (map[VolumeCounter]int, error)
 }
 
 // A DigitalOceanCollector is a Prometheus collector for metrics regarding
 // DigitalOcean.
 type DigitalOceanCollector struct {
-	Droplets    *prometheus.Desc
-	FloatingIPs *prometheus.Desc
-	Volumes     *prometheus.Desc
+	Droplets      *prometheus.Desc
+	FloatingIPs   *prometheus.Desc
+	LoadBalancers *prometheus.Desc
+	Volumes       *prometheus.Desc
 
 	dos DigitalOceanSource
 }
@@ -44,6 +46,12 @@ func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 			[]string{"region", "status"},
 			nil,
 		),
+		LoadBalancers: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "load_balancers", "count"),
+			"Number of Load Balancers by region and status.",
+			[]string{"region", "status"},
+			nil,
+		),
 		Volumes: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "volumes", "count"),
 			"Number of Volumes by region, size in GiB, and status.",
@@ -61,10 +69,13 @@ func (c *DigitalOceanCollector) collect(ch chan<- prometheus.Metric) (*prometheu
 	if count, err := c.collectDropletCounts(ch); err != nil {
 		return count, err
 	}
-	if count, err := c.collectVolumeCounts(ch); err != nil {
+	if count, err := c.collectFipsCounts(ch); err != nil {
 		return count, err
 	}
-	if count, err := c.collectFipsCounts(ch); err != nil {
+	if count, err := c.collectLoadBalancerCounts(ch); err != nil {
+		return count, err
+	}
+	if count, err := c.collectVolumeCounts(ch); err != nil {
 		return count, err
 	}
 
@@ -100,6 +111,25 @@ func (c *DigitalOceanCollector) collectFipsCounts(ch chan<- prometheus.Metric) (
 	for fip, count := range fips {
 		ch <- prometheus.MustNewConstMetric(
 			c.FloatingIPs,
+			prometheus.GaugeValue,
+			float64(count),
+			fip.region,
+			fip.status,
+		)
+	}
+
+	return nil, nil
+}
+
+func (c *DigitalOceanCollector) collectLoadBalancerCounts(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	fips, err := c.dos.LoadBalancers()
+	if err != nil {
+		return c.FloatingIPs, err
+	}
+
+	for fip, count := range fips {
+		ch <- prometheus.MustNewConstMetric(
+			c.LoadBalancers,
 			prometheus.GaugeValue,
 			float64(count),
 			fip.region,
