@@ -86,6 +86,43 @@ func TestFloatingIPs(t *testing.T) {
 	}
 }
 
+func TestLoadBalancers(t *testing.T) {
+	var lbTests = []struct {
+		resp     string
+		expected map[LoadBalancerCounter]int
+	}{
+		{`{"load_balancers": [
+        {"id": "abc", "region":{"slug":"nyc3"}, "status": "active"},
+        {"id": "xyz", "region":{"slug":"nyc3"}, "status": "active"}]}`,
+			map[LoadBalancerCounter]int{LoadBalancerCounter{status: "active", region: "nyc3"}: 2}},
+		{`{"load_balancers": [
+        {"id": "abc", "region":{"slug":"nyc3"}, "status": "active"},
+        {"id": "xyz", "region":{"slug":"nyc3"}, "status": "active"},
+        {"droplet": null, "region":{"slug":"nyc3"}, "status": "new"}]}`,
+			map[LoadBalancerCounter]int{LoadBalancerCounter{status: "active", region: "nyc3"}: 2,
+				LoadBalancerCounter{status: "new", region: "nyc3"}: 1}},
+		{`{"load_balancers": [
+        {"id": "abc", "region":{"slug":"nyc3"}, "status": "active"},
+        {"id": "xyz", "region":{"slug":"nyc3"}, "status": "active"},
+        {"id": "efg", "region":{"slug":"nyc3"}, "status": "new"},
+        {"id": "hijk", "region":{"slug":"nyc2"}, "status": "error"}]}`,
+			map[LoadBalancerCounter]int{LoadBalancerCounter{status: "active", region: "nyc3"}: 2,
+				LoadBalancerCounter{status: "new", region: "nyc3"}:   1,
+				LoadBalancerCounter{status: "error", region: "nyc2"}: 1}},
+	}
+
+	for _, tt := range lbTests {
+		apiServer(t, "/v2/load_balancers", tt.resp, func() {
+			dos := getDosClient()
+			fipCounters, err := dos.LoadBalancers()
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			}
+			assert.Equal(t, tt.expected, fipCounters, "they should be equal")
+		})
+	}
+}
+
 func TestVolumes(t *testing.T) {
 	var volumeTests = []struct {
 		resp     string
