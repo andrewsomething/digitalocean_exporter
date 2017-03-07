@@ -31,6 +31,12 @@ type LoadBalancerCounter struct {
 	region string
 }
 
+// TagCounter is a struct holding information about a Tag.
+type TagCounter struct {
+	name         string
+	resourceType string
+}
+
 // VolumeCounter is a struct holding information about a Block Storage Volume.
 type VolumeCounter struct {
 	status string
@@ -191,6 +197,55 @@ func listLoadBalancers(s *DigitalOceanService) ([]godo.LoadBalancer, error) {
 	}
 
 	return lbList, nil
+}
+
+// Tags retrieves a count of Tags grouped by name and resource type.
+func (s *DigitalOceanService) Tags() (map[TagCounter]int, error) {
+	tags, err := listTags(s)
+
+	counters := make(map[TagCounter]int)
+
+	for _, t := range tags {
+		// Note: Currently only Droplets may be tagged.
+		// reflect.ValueOf(t.Resources).Elem().Type().Field(0).Name
+		c := TagCounter{
+			t.Name,
+			"droplets",
+		}
+		counters[c] = counters[c] + t.Resources.Droplets.Count
+	}
+
+	return counters, err
+}
+
+func listTags(s *DigitalOceanService) ([]godo.Tag, error) {
+	ctx := context.TODO()
+	tagList := []godo.Tag{}
+
+	for {
+		tags, resp, err := s.C.Tags.List(ctx, pageOpt)
+
+		if err != nil {
+			return nil, err
+		}
+
+		for _, t := range tags {
+			tagList = append(tagList, t)
+		}
+
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			return nil, err
+		}
+
+		pageOpt.Page = page + 1
+	}
+
+	return tagList, nil
 }
 
 // Volumes retrieves a count of Volumes grouped by status, size, and region.

@@ -123,6 +123,33 @@ func TestLoadBalancers(t *testing.T) {
 	}
 }
 
+func TestTags(t *testing.T) {
+	var tagTests = []struct {
+		resp     string
+		expected map[TagCounter]int
+	}{
+		{`{"tags": [
+        {"name": "foo", "resources": {"droplets": {"count": 3}}}]}`,
+			map[TagCounter]int{TagCounter{name: "foo", resourceType: "droplets"}: 3}},
+		{`{"tags": [
+        {"name": "foo", "resources": {"droplets": {"count": 1}}},
+        {"name": "bar", "resources": {"droplets": {"count": 2}}}]}`,
+			map[TagCounter]int{TagCounter{name: "foo", resourceType: "droplets"}: 1,
+				TagCounter{name: "bar", resourceType: "droplets"}: 2}},
+	}
+
+	for _, tt := range tagTests {
+		apiServer(t, "/v2/tags", tt.resp, func() {
+			dos := getDosClient()
+			tagCounters, err := dos.Tags()
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			}
+			assert.Equal(t, tt.expected, tagCounters, "they should be equal")
+		})
+	}
+}
+
 func TestVolumes(t *testing.T) {
 	var volumeTests = []struct {
 		resp     string
