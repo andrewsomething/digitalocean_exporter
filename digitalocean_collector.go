@@ -13,6 +13,7 @@ type DigitalOceanSource interface {
 	Droplets() (map[DropletCounter]int, error)
 	FloatingIPs() (map[FlipCounter]int, error)
 	LoadBalancers() (map[LoadBalancerCounter]int, error)
+	Tags() (map[TagCounter]int, error)
 	Volumes() (map[VolumeCounter]int, error)
 }
 
@@ -22,6 +23,7 @@ type DigitalOceanCollector struct {
 	Droplets      *prometheus.Desc
 	FloatingIPs   *prometheus.Desc
 	LoadBalancers *prometheus.Desc
+	Tags          *prometheus.Desc
 	Volumes       *prometheus.Desc
 
 	dos DigitalOceanSource
@@ -52,6 +54,12 @@ func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 			[]string{"region", "status"},
 			nil,
 		),
+		Tags: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "tags", "count"),
+			"Count of tagged resources by name and resource type.",
+			[]string{"name", "resource_type"},
+			nil,
+		),
 		Volumes: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "volumes", "count"),
 			"Number of Volumes by region, size in GiB, and status.",
@@ -73,6 +81,9 @@ func (c *DigitalOceanCollector) collect(ch chan<- prometheus.Metric) (*prometheu
 		return count, err
 	}
 	if count, err := c.collectLoadBalancerCounts(ch); err != nil {
+		return count, err
+	}
+	if count, err := c.collectTagCounts(ch); err != nil {
 		return count, err
 	}
 	if count, err := c.collectVolumeCounts(ch); err != nil {
@@ -134,6 +145,25 @@ func (c *DigitalOceanCollector) collectLoadBalancerCounts(ch chan<- prometheus.M
 			float64(count),
 			fip.region,
 			fip.status,
+		)
+	}
+
+	return nil, nil
+}
+
+func (c *DigitalOceanCollector) collectTagCounts(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
+	tags, err := c.dos.Tags()
+	if err != nil {
+		return c.Tags, err
+	}
+
+	for t, count := range tags {
+		ch <- prometheus.MustNewConstMetric(
+			c.Tags,
+			prometheus.GaugeValue,
+			float64(count),
+			t.name,
+			t.resourceType,
 		)
 	}
 
