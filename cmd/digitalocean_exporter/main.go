@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/andrewsomething/digitalocean_exporter"
 	"github.com/digitalocean/godo"
 	"github.com/prometheus/client_golang/prometheus"
@@ -21,6 +22,7 @@ const (
 )
 
 var (
+	debug       = flag.Bool("debug", false, "Print debug logs")
 	listenAddr  = flag.String("listen", "localhost:9292", "Listen address for DigitalOcean exporter")
 	metricsPath = flag.String("metrics-path", "/metrics", "URL path for surfacing metrics")
 	apiToken    = flag.String("token", "", "DigitalOcean API token (read-only)")
@@ -48,6 +50,10 @@ func main() {
 
 	if *apiToken == "" {
 		log.Fatal("A DigitalOcean API token must be specified with '-token' flag")
+	}
+
+	if *debug {
+		logrus.SetLevel(logrus.DebugLevel)
 	}
 
 	ts := &TokenSource{AccessToken: *apiToken}

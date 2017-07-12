@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/digitalocean/godo"
 )
 
@@ -73,6 +74,7 @@ func listDroplets(s *DigitalOceanService) ([]godo.Droplet, error) {
 
 	for {
 		droplets, resp, err := s.C.Droplets.List(ctx, pageOpt)
+		logSearchRequest("Droplets", pageOpt, len(droplets), err)
 
 		if err != nil {
 			return nil, err
@@ -128,6 +130,7 @@ func listFips(s *DigitalOceanService) ([]godo.FloatingIP, error) {
 
 	for {
 		fips, resp, err := s.C.FloatingIPs.List(ctx, pageOpt)
+		logSearchRequest("FloatingIPs", pageOpt, len(fips), err)
 
 		if err != nil {
 			return nil, err
@@ -175,6 +178,7 @@ func listLoadBalancers(s *DigitalOceanService) ([]godo.LoadBalancer, error) {
 
 	for {
 		lbs, resp, err := s.C.LoadBalancers.List(ctx, pageOpt)
+		logSearchRequest("LoadBalancers", pageOpt, len(lbs), err)
 
 		if err != nil {
 			return nil, err
@@ -224,6 +228,7 @@ func listTags(s *DigitalOceanService) ([]godo.Tag, error) {
 
 	for {
 		tags, resp, err := s.C.Tags.List(ctx, pageOpt)
+		logSearchRequest("Tags", pageOpt, len(tags), err)
 
 		if err != nil {
 			return nil, err
@@ -283,6 +288,7 @@ func listVolumes(s *DigitalOceanService) ([]godo.Volume, error) {
 
 	for {
 		volumes, resp, err := s.C.Storage.ListVolumes(ctx, volumeParams)
+		logSearchRequest("Volumes", volumeParams.ListOptions, len(volumes), err)
 
 		if err != nil {
 			return nil, err
@@ -305,4 +311,15 @@ func listVolumes(s *DigitalOceanService) ([]godo.Volume, error) {
 	}
 
 	return volumeList, nil
+}
+
+func logSearchRequest(resource string, pageOpt *godo.ListOptions, elementsCount int, err error) {
+	logrus.Debugf(
+		"Looking for %s: page=%d perPage=%d found=%d error=%v",
+		resource,
+		pageOpt.Page,
+		pageOpt.PerPage,
+		elementsCount,
+		err,
+	)
 }
