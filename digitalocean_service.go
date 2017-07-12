@@ -44,9 +44,11 @@ type VolumeCounter struct {
 	size   string
 }
 
-var pageOpt = &godo.ListOptions{
-	Page:    1,
-	PerPage: 200,
+func newPageOpt() *godo.ListOptions {
+	return &godo.ListOptions{
+		Page:    1,
+		PerPage: 200,
+	}
 }
 
 // Droplets retrieves a count of Droplets grouped by status, size, and region.
@@ -70,6 +72,7 @@ func (s *DigitalOceanService) Droplets() (map[DropletCounter]int, error) {
 func listDroplets(s *DigitalOceanService) ([]godo.Droplet, error) {
 	ctx := context.TODO()
 	dropletList := []godo.Droplet{}
+	pageOpt := newPageOpt()
 
 	for {
 		droplets, resp, err := s.C.Droplets.List(ctx, pageOpt)
@@ -125,6 +128,7 @@ func (s *DigitalOceanService) FloatingIPs() (map[FlipCounter]int, error) {
 func listFips(s *DigitalOceanService) ([]godo.FloatingIP, error) {
 	ctx := context.TODO()
 	fipList := []godo.FloatingIP{}
+	pageOpt := newPageOpt()
 
 	for {
 		fips, resp, err := s.C.FloatingIPs.List(ctx, pageOpt)
@@ -172,6 +176,7 @@ func (s *DigitalOceanService) LoadBalancers() (map[LoadBalancerCounter]int, erro
 func listLoadBalancers(s *DigitalOceanService) ([]godo.LoadBalancer, error) {
 	ctx := context.TODO()
 	lbList := []godo.LoadBalancer{}
+	pageOpt := newPageOpt()
 
 	for {
 		lbs, resp, err := s.C.LoadBalancers.List(ctx, pageOpt)
@@ -221,6 +226,7 @@ func (s *DigitalOceanService) Tags() (map[TagCounter]int, error) {
 func listTags(s *DigitalOceanService) ([]godo.Tag, error) {
 	ctx := context.TODO()
 	tagList := []godo.Tag{}
+	pageOpt := newPageOpt()
 
 	for {
 		tags, resp, err := s.C.Tags.List(ctx, pageOpt)
@@ -278,7 +284,7 @@ func listVolumes(s *DigitalOceanService) ([]godo.Volume, error) {
 	ctx := context.TODO()
 	volumeList := []godo.Volume{}
 	volumeParams := &godo.ListVolumeParams{
-		ListOptions: pageOpt,
+		ListOptions: newPageOpt(),
 	}
 
 	for {
