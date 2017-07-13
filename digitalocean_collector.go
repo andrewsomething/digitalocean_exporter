@@ -1,8 +1,6 @@
 package digitaloceanexporter
 
 import (
-	"log"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -10,11 +8,11 @@ import (
 // resources in a DigitalOcean account. It is implemented by
 // *digitaloceanexporter.DigitalOceanService.
 type DigitalOceanSource interface {
-	Droplets() (map[DropletCounter]int, error)
-	FloatingIPs() (map[FlipCounter]int, error)
-	LoadBalancers() (map[LoadBalancerCounter]int, error)
-	Tags() (map[TagCounter]int, error)
-	Volumes() (map[VolumeCounter]int, error)
+	Droplets() map[DropletCounter]int
+	FloatingIPs() map[FlipCounter]int
+	LoadBalancers() map[LoadBalancerCounter]int
+	Tags() map[TagCounter]int
+	Volumes() map[VolumeCounter]int
 }
 
 // A DigitalOceanCollector is a Prometheus collector for metrics regarding
@@ -73,33 +71,16 @@ func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 
 // collect begins a metrics collection task for all metrics related to
 // resources in a DigitalOcean account.
-func (c *DigitalOceanCollector) collect(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	if count, err := c.collectDropletCounts(ch); err != nil {
-		return count, err
-	}
-	if count, err := c.collectFipsCounts(ch); err != nil {
-		return count, err
-	}
-	if count, err := c.collectLoadBalancerCounts(ch); err != nil {
-		return count, err
-	}
-	if count, err := c.collectTagCounts(ch); err != nil {
-		return count, err
-	}
-	if count, err := c.collectVolumeCounts(ch); err != nil {
-		return count, err
-	}
-
-	return nil, nil
+func (c *DigitalOceanCollector) collect(ch chan<- prometheus.Metric) {
+	c.collectDropletCounts(ch)
+	c.collectFipsCounts(ch)
+	c.collectLoadBalancerCounts(ch)
+	c.collectTagCounts(ch)
+	c.collectVolumeCounts(ch)
 }
 
-func (c *DigitalOceanCollector) collectDropletCounts(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	droplets, err := c.dos.Droplets()
-	if err != nil {
-		return c.Droplets, err
-	}
-
-	for d, count := range droplets {
+func (c *DigitalOceanCollector) collectDropletCounts(ch chan<- prometheus.Metric) {
+	for d, count := range c.dos.Droplets() {
 		ch <- prometheus.MustNewConstMetric(
 			c.Droplets,
 			prometheus.GaugeValue,
@@ -109,17 +90,10 @@ func (c *DigitalOceanCollector) collectDropletCounts(ch chan<- prometheus.Metric
 			d.status,
 		)
 	}
-
-	return nil, nil
 }
 
-func (c *DigitalOceanCollector) collectFipsCounts(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	fips, err := c.dos.FloatingIPs()
-	if err != nil {
-		return c.FloatingIPs, err
-	}
-
-	for fip, count := range fips {
+func (c *DigitalOceanCollector) collectFipsCounts(ch chan<- prometheus.Metric) {
+	for fip, count := range c.dos.FloatingIPs() {
 		ch <- prometheus.MustNewConstMetric(
 			c.FloatingIPs,
 			prometheus.GaugeValue,
@@ -128,36 +102,22 @@ func (c *DigitalOceanCollector) collectFipsCounts(ch chan<- prometheus.Metric) (
 			fip.status,
 		)
 	}
-
-	return nil, nil
 }
 
-func (c *DigitalOceanCollector) collectLoadBalancerCounts(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	fips, err := c.dos.LoadBalancers()
-	if err != nil {
-		return c.FloatingIPs, err
-	}
-
-	for fip, count := range fips {
+func (c *DigitalOceanCollector) collectLoadBalancerCounts(ch chan<- prometheus.Metric) {
+	for lb, count := range c.dos.LoadBalancers() {
 		ch <- prometheus.MustNewConstMetric(
 			c.LoadBalancers,
 			prometheus.GaugeValue,
 			float64(count),
-			fip.region,
-			fip.status,
+			lb.region,
+			lb.status,
 		)
 	}
-
-	return nil, nil
 }
 
-func (c *DigitalOceanCollector) collectTagCounts(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	tags, err := c.dos.Tags()
-	if err != nil {
-		return c.Tags, err
-	}
-
-	for t, count := range tags {
+func (c *DigitalOceanCollector) collectTagCounts(ch chan<- prometheus.Metric) {
+	for t, count := range c.dos.Tags() {
 		ch <- prometheus.MustNewConstMetric(
 			c.Tags,
 			prometheus.GaugeValue,
@@ -166,17 +126,10 @@ func (c *DigitalOceanCollector) collectTagCounts(ch chan<- prometheus.Metric) (*
 			t.resourceType,
 		)
 	}
-
-	return nil, nil
 }
 
-func (c *DigitalOceanCollector) collectVolumeCounts(ch chan<- prometheus.Metric) (*prometheus.Desc, error) {
-	volumes, err := c.dos.Volumes()
-	if err != nil {
-		return c.Volumes, err
-	}
-
-	for v, count := range volumes {
+func (c *DigitalOceanCollector) collectVolumeCounts(ch chan<- prometheus.Metric) {
+	for v, count := range c.dos.Volumes() {
 		ch <- prometheus.MustNewConstMetric(
 			c.Volumes,
 			prometheus.GaugeValue,
@@ -186,8 +139,6 @@ func (c *DigitalOceanCollector) collectVolumeCounts(ch chan<- prometheus.Metric)
 			v.status,
 		)
 	}
-
-	return nil, nil
 }
 
 // Describe sends the descriptors of each metric over to the provided channel.
@@ -205,9 +156,5 @@ func (c *DigitalOceanCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect sends the metric values for each metric pertaining to the DigitalOcean
 // resources to the provided prometheus Metric channel.
 func (c *DigitalOceanCollector) Collect(ch chan<- prometheus.Metric) {
-	if desc, err := c.collect(ch); err != nil {
-		log.Printf("[ERROR] failed collecting DigitalOcean metric %v: %v", desc, err)
-		ch <- prometheus.NewInvalidMetric(desc, err)
-		return
-	}
+	c.collect(ch)
 }

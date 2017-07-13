@@ -39,12 +39,10 @@ func TestDroplets(t *testing.T) {
 
 	for _, tt := range dropletTests {
 		apiServer(t, "/v2/droplets", tt.resp, func() {
-			dos := getDosClient()
-			dropletCounters, err := dos.Droplets()
-			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-			}
-			assert.Equal(t, tt.expected, dropletCounters, "they should be equal")
+			dob := getDOBuffer()
+			dob.prepareDroplets()
+			dos := NewDigitalOceanService(dob)
+			assert.Equal(t, tt.expected, dos.Droplets(), "they should be equal")
 		})
 	}
 }
@@ -76,12 +74,10 @@ func TestFloatingIPs(t *testing.T) {
 
 	for _, tt := range fipTests {
 		apiServer(t, "/v2/floating_ips", tt.resp, func() {
-			dos := getDosClient()
-			fipCounters, err := dos.FloatingIPs()
-			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-			}
-			assert.Equal(t, tt.expected, fipCounters, "they should be equal")
+			dob := getDOBuffer()
+			dob.prepareFloatingIPs()
+			dos := NewDigitalOceanService(dob)
+			assert.Equal(t, tt.expected, dos.FloatingIPs(), "they should be equal")
 		})
 	}
 }
@@ -113,12 +109,10 @@ func TestLoadBalancers(t *testing.T) {
 
 	for _, tt := range lbTests {
 		apiServer(t, "/v2/load_balancers", tt.resp, func() {
-			dos := getDosClient()
-			fipCounters, err := dos.LoadBalancers()
-			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-			}
-			assert.Equal(t, tt.expected, fipCounters, "they should be equal")
+			dob := getDOBuffer()
+			dob.prepareLoadBalancers()
+			dos := NewDigitalOceanService(dob)
+			assert.Equal(t, tt.expected, dos.LoadBalancers(), "they should be equal")
 		})
 	}
 }
@@ -140,12 +134,10 @@ func TestTags(t *testing.T) {
 
 	for _, tt := range tagTests {
 		apiServer(t, "/v2/tags", tt.resp, func() {
-			dos := getDosClient()
-			tagCounters, err := dos.Tags()
-			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-			}
-			assert.Equal(t, tt.expected, tagCounters, "they should be equal")
+			dob := getDOBuffer()
+			dob.prepareTags()
+			dos := NewDigitalOceanService(dob)
+			assert.Equal(t, tt.expected, dos.Tags(), "they should be equal")
 		})
 	}
 }
@@ -177,12 +169,10 @@ func TestVolumes(t *testing.T) {
 
 	for _, tt := range volumeTests {
 		apiServer(t, "/v2/volumes", tt.resp, func() {
-			dos := getDosClient()
-			volumeCounters, err := dos.Volumes()
-			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-			}
-			assert.Equal(t, tt.expected, volumeCounters, "they should be equal")
+			dob := getDOBuffer()
+			dob.prepareVolumes()
+			dos := NewDigitalOceanService(dob)
+			assert.Equal(t, tt.expected, dos.Volumes(), "they should be equal")
 		})
 	}
 }
@@ -199,15 +189,17 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 	}, nil
 }
 
-func getDosClient() *DigitalOceanService {
+func getDOBuffer() *DigitalOceanBuffer {
 	ts := &TokenSource{AccessToken: "fake-testing-token"}
 	oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
 	c := godo.NewClient(oauthClient)
 	c.BaseURL = GodoBase
 
-	dos := &DigitalOceanService{c}
+	dob := &DigitalOceanBuffer{
+		client: c,
+	}
 
-	return dos
+	return dob
 }
 
 func apiServer(t testing.TB, path string, resp string, test func()) {

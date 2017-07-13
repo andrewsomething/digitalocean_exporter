@@ -3,14 +3,19 @@ package digitaloceanexporter
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/digitalocean/godo"
 )
 
+const (
+	DefaultRefreshInterval int = 60
+)
+
 // DigitalOceanService is a wrapper around godo.Client.
 type DigitalOceanService struct {
-	C *godo.Client
+	Buffer *DigitalOceanBuffer
 }
 
 // DropletCounter is a struct holding information about a Droplet.
@@ -53,30 +58,54 @@ func newPageOpt() *godo.ListOptions {
 }
 
 // Droplets retrieves a count of Droplets grouped by status, size, and region.
-func (s *DigitalOceanService) Droplets() (map[DropletCounter]int, error) {
-	droplets, err := listDroplets(s)
-
-	counters := make(map[DropletCounter]int)
-
-	for _, d := range droplets {
-		c := DropletCounter{
-			d.Status,
-			d.Region.Slug,
-			d.Size.Slug,
-		}
-		counters[c]++
-	}
-
-	return counters, err
+func (s *DigitalOceanService) Droplets() map[DropletCounter]int {
+	return s.Buffer.Droplets
 }
 
-func listDroplets(s *DigitalOceanService) ([]godo.Droplet, error) {
+// FloatingIPs retrieves a count of Floating IPs grouped by status and region.
+func (s *DigitalOceanService) FloatingIPs() map[FlipCounter]int {
+	return s.Buffer.FloatingIPs
+}
+
+// LoadBalancers retrieves a count of Load Balancers grouped by status and region.
+func (s *DigitalOceanService) LoadBalancers() map[LoadBalancerCounter]int {
+	return s.Buffer.LoadBalancers
+}
+
+// Tags retrieves a count of Tags grouped by name and resource type.
+func (s *DigitalOceanService) Tags() map[TagCounter]int {
+	return s.Buffer.Tags
+}
+
+// Volumes retrieves a count of Volumes grouped by status, size, and region.
+func (s *DigitalOceanService) Volumes() map[VolumeCounter]int {
+	return s.Buffer.Volumes
+}
+
+func NewDigitalOceanService(buffer *DigitalOceanBuffer) *DigitalOceanService {
+	return &DigitalOceanService{
+		Buffer: buffer,
+	}
+}
+
+type DigitalOceanBuffer struct {
+	client          *godo.Client
+	refreshInterval time.Duration
+
+	Droplets      map[DropletCounter]int
+	FloatingIPs   map[FlipCounter]int
+	LoadBalancers map[LoadBalancerCounter]int
+	Tags          map[TagCounter]int
+	Volumes       map[VolumeCounter]int
+}
+
+func (b *DigitalOceanBuffer) listDroplets() ([]godo.Droplet, error) {
 	ctx := context.TODO()
 	dropletList := []godo.Droplet{}
 	pageOpt := newPageOpt()
 
 	for {
-		droplets, resp, err := s.C.Droplets.List(ctx, pageOpt)
+		droplets, resp, err := b.client.Droplets.List(ctx, pageOpt)
 		logSearchRequest("Droplets", pageOpt, len(droplets), err)
 
 		if err != nil {
@@ -102,38 +131,31 @@ func listDroplets(s *DigitalOceanService) ([]godo.Droplet, error) {
 	return dropletList, nil
 }
 
-// FloatingIPs retrieves a count of Floating IPs grouped by status and region.
-func (s *DigitalOceanService) FloatingIPs() (map[FlipCounter]int, error) {
-	fips, err := listFips(s)
+func (b *DigitalOceanBuffer) prepareDroplets() {
+	counters := make(map[DropletCounter]int)
 
-	counters := make(map[FlipCounter]int)
+	droplets, err := b.listDroplets()
+	logLastError(err)
 
-	for _, fip := range fips {
-		var status string
-
-		switch {
-		case fip.Droplet == nil:
-			status = "unassigned"
-		default:
-			status = "assigned"
-		}
-		c := FlipCounter{
-			status,
-			fip.Region.Slug,
+	for _, d := range droplets {
+		c := DropletCounter{
+			d.Status,
+			d.Region.Slug,
+			d.Size.Slug,
 		}
 		counters[c]++
 	}
 
-	return counters, err
+	b.Droplets = counters
 }
 
-func listFips(s *DigitalOceanService) ([]godo.FloatingIP, error) {
+func (b *DigitalOceanBuffer) listFips() ([]godo.FloatingIP, error) {
 	ctx := context.TODO()
 	fipList := []godo.FloatingIP{}
 	pageOpt := newPageOpt()
 
 	for {
-		fips, resp, err := s.C.FloatingIPs.List(ctx, pageOpt)
+		fips, resp, err := b.client.FloatingIPs.List(ctx, pageOpt)
 		logSearchRequest("FloatingIPs", pageOpt, len(fips), err)
 
 		if err != nil {
@@ -159,30 +181,38 @@ func listFips(s *DigitalOceanService) ([]godo.FloatingIP, error) {
 	return fipList, nil
 }
 
-// LoadBalancers retrieves a count of Load Balancers grouped by status and region.
-func (s *DigitalOceanService) LoadBalancers() (map[LoadBalancerCounter]int, error) {
-	lbs, err := listLoadBalancers(s)
+func (b *DigitalOceanBuffer) prepareFloatingIPs() {
+	counters := make(map[FlipCounter]int)
 
-	counters := make(map[LoadBalancerCounter]int)
+	floatingIPs, err := b.listFips()
+	logLastError(err)
 
-	for _, lb := range lbs {
-		c := LoadBalancerCounter{
-			lb.Status,
-			lb.Region.Slug,
+	for _, fip := range floatingIPs {
+		var status string
+
+		switch {
+		case fip.Droplet == nil:
+			status = "unassigned"
+		default:
+			status = "assigned"
+		}
+		c := FlipCounter{
+			status,
+			fip.Region.Slug,
 		}
 		counters[c]++
 	}
 
-	return counters, err
+	b.FloatingIPs = counters
 }
 
-func listLoadBalancers(s *DigitalOceanService) ([]godo.LoadBalancer, error) {
+func (b *DigitalOceanBuffer) listLoadBalancers() ([]godo.LoadBalancer, error) {
 	ctx := context.TODO()
 	lbList := []godo.LoadBalancer{}
 	pageOpt := newPageOpt()
 
 	for {
-		lbs, resp, err := s.C.LoadBalancers.List(ctx, pageOpt)
+		lbs, resp, err := b.client.LoadBalancers.List(ctx, pageOpt)
 		logSearchRequest("LoadBalancers", pageOpt, len(lbs), err)
 
 		if err != nil {
@@ -208,32 +238,30 @@ func listLoadBalancers(s *DigitalOceanService) ([]godo.LoadBalancer, error) {
 	return lbList, nil
 }
 
-// Tags retrieves a count of Tags grouped by name and resource type.
-func (s *DigitalOceanService) Tags() (map[TagCounter]int, error) {
-	tags, err := listTags(s)
+func (b *DigitalOceanBuffer) prepareLoadBalancers() {
+	counters := make(map[LoadBalancerCounter]int)
 
-	counters := make(map[TagCounter]int)
+	loadBallancers, err := b.listLoadBalancers()
+	logLastError(err)
 
-	for _, t := range tags {
-		// Note: Currently only Droplets may be tagged.
-		// reflect.ValueOf(t.Resources).Elem().Type().Field(0).Name
-		c := TagCounter{
-			t.Name,
-			"droplets",
+	for _, lb := range loadBallancers {
+		c := LoadBalancerCounter{
+			lb.Status,
+			lb.Region.Slug,
 		}
-		counters[c] = counters[c] + t.Resources.Droplets.Count
+		counters[c]++
 	}
 
-	return counters, err
+	b.LoadBalancers = counters
 }
 
-func listTags(s *DigitalOceanService) ([]godo.Tag, error) {
+func (b *DigitalOceanBuffer) listTags() ([]godo.Tag, error) {
 	ctx := context.TODO()
 	tagList := []godo.Tag{}
 	pageOpt := newPageOpt()
 
 	for {
-		tags, resp, err := s.C.Tags.List(ctx, pageOpt)
+		tags, resp, err := b.client.Tags.List(ctx, pageOpt)
 		logSearchRequest("Tags", pageOpt, len(tags), err)
 
 		if err != nil {
@@ -259,33 +287,26 @@ func listTags(s *DigitalOceanService) ([]godo.Tag, error) {
 	return tagList, nil
 }
 
-// Volumes retrieves a count of Volumes grouped by status, size, and region.
-func (s *DigitalOceanService) Volumes() (map[VolumeCounter]int, error) {
-	volumes, err := listVolumes(s)
+func (b *DigitalOceanBuffer) prepareTags() {
+	counters := make(map[TagCounter]int)
 
-	counters := make(map[VolumeCounter]int)
+	tags, err := b.listTags()
+	logLastError(err)
 
-	for _, v := range volumes {
-		var status string
-
-		switch {
-		case len(v.DropletIDs) > 0:
-			status = "attached"
-		default:
-			status = "unattached"
+	for _, t := range tags {
+		// Note: Currently only Droplets may be tagged.
+		// reflect.ValueOf(t.Resources).Elem().Type().Field(0).Name
+		c := TagCounter{
+			t.Name,
+			"droplets",
 		}
-		c := VolumeCounter{
-			status,
-			v.Region.Slug,
-			strconv.FormatInt(v.SizeGigaBytes, 10),
-		}
-		counters[c]++
+		counters[c] = counters[c] + t.Resources.Droplets.Count
 	}
 
-	return counters, err
+	b.Tags = counters
 }
 
-func listVolumes(s *DigitalOceanService) ([]godo.Volume, error) {
+func (b *DigitalOceanBuffer) listVolumes() ([]godo.Volume, error) {
 	ctx := context.TODO()
 	volumeList := []godo.Volume{}
 	volumeParams := &godo.ListVolumeParams{
@@ -293,7 +314,7 @@ func listVolumes(s *DigitalOceanService) ([]godo.Volume, error) {
 	}
 
 	for {
-		volumes, resp, err := s.C.Storage.ListVolumes(ctx, volumeParams)
+		volumes, resp, err := b.client.Storage.ListVolumes(ctx, volumeParams)
 		logSearchRequest("Volumes", volumeParams.ListOptions, len(volumes), err)
 
 		if err != nil {
@@ -319,6 +340,72 @@ func listVolumes(s *DigitalOceanService) ([]godo.Volume, error) {
 	return volumeList, nil
 }
 
+func (b *DigitalOceanBuffer) prepareVolumes() {
+	counters := make(map[VolumeCounter]int)
+
+	volumes, err := b.listVolumes()
+	logLastError(err)
+
+	for _, v := range volumes {
+		var status string
+
+		switch {
+		case len(v.DropletIDs) > 0:
+			status = "attached"
+		default:
+			status = "unattached"
+		}
+		c := VolumeCounter{
+			status,
+			v.Region.Slug,
+			strconv.FormatInt(v.SizeGigaBytes, 10),
+		}
+		counters[c]++
+	}
+
+	b.Volumes = counters
+}
+
+func (n *DigitalOceanBuffer) refresh() {
+	logrus.Infoln("Refreshing DigitalOcean data")
+	startedAt := time.Now()
+
+	n.prepareDroplets()
+	n.prepareFloatingIPs()
+	n.prepareLoadBalancers()
+	n.prepareTags()
+	n.prepareVolumes()
+
+	defer func() {
+		duration := time.Now().Sub(startedAt)
+		logrus.WithFields(logrus.Fields{
+			"duration": duration.String(),
+		}).Infoln("Finished DigitalOcean data refresh")
+	}()
+}
+
+func (n *DigitalOceanBuffer) watch() {
+	n.refresh()
+	for {
+		select {
+		case <-time.After(n.refreshInterval):
+			n.refresh()
+		}
+	}
+}
+
+func NewDigitalOceanBuffer(client *godo.Client, refreshInterval int) *DigitalOceanBuffer {
+	interval := time.Duration(refreshInterval) * time.Second
+	buffer := &DigitalOceanBuffer{
+		client:          client,
+		refreshInterval: interval,
+	}
+
+	go buffer.watch()
+
+	return buffer
+}
+
 func logSearchRequest(resource string, pageOpt *godo.ListOptions, elementsCount int, err error) {
 	logrus.Debugf(
 		"Looking for %s: page=%d perPage=%d found=%d error=%v",
@@ -328,4 +415,10 @@ func logSearchRequest(resource string, pageOpt *godo.ListOptions, elementsCount 
 		elementsCount,
 		err,
 	)
+}
+
+func logLastError(err error) {
+	if err != nil {
+		logrus.WithError(err).Errorln("Error while requesting DigitalOcean")
+	}
 }

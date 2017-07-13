@@ -22,11 +22,12 @@ const (
 )
 
 var (
-	debug       = flag.Bool("debug", false, "Print debug logs")
-	listenAddr  = flag.String("listen", "localhost:9292", "Listen address for DigitalOcean exporter")
-	metricsPath = flag.String("metrics-path", "/metrics", "URL path for surfacing metrics")
-	apiToken    = flag.String("token", "", "DigitalOcean API token (read-only)")
-	versionFlag = flag.Bool("v", false, "Prints current digitalocean_exporter version")
+	debug           = flag.Bool("debug", false, "Print debug logs")
+	listenAddr      = flag.String("listen", "localhost:9292", "Listen address for DigitalOcean exporter")
+	metricsPath     = flag.String("metrics-path", "/metrics", "URL path for surfacing metrics")
+	apiToken        = flag.String("token", "", "DigitalOcean API token (read-only)")
+	refreshInterval = flag.Int("refresh-interval", digitaloceanexporter.DefaultRefreshInterval, "Interval (in seconds) between subsequent requests against DigitalOcean API")
+	versionFlag     = flag.Bool("v", false, "Prints current digitalocean_exporter version")
 )
 
 // TokenSource holds an OAuth token.
@@ -62,7 +63,9 @@ func main() {
 	ua := []string{agent, version}
 	c.UserAgent = strings.Join(ua, "/")
 
-	newExporter := digitaloceanexporter.New(&digitaloceanexporter.DigitalOceanService{C: c})
+	digitalOceanBuffer := digitaloceanexporter.NewDigitalOceanBuffer(c, *refreshInterval)
+	digitalOceanService := digitaloceanexporter.NewDigitalOceanService(digitalOceanBuffer)
+	newExporter := digitaloceanexporter.New(digitalOceanService)
 	prometheus.MustRegister(newExporter)
 
 	http.Handle(*metricsPath, prometheus.Handler())
