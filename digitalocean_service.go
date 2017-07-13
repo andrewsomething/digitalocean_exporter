@@ -2,11 +2,13 @@ package digitaloceanexporter
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/digitalocean/godo"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -91,6 +93,7 @@ func NewDigitalOceanService(buffer *DigitalOceanBuffer) *DigitalOceanService {
 type DigitalOceanBuffer struct {
 	client          *godo.Client
 	refreshInterval time.Duration
+	refreshID       uuid.UUID
 
 	Droplets      map[DropletCounter]int
 	FloatingIPs   map[FlipCounter]int
@@ -106,7 +109,7 @@ func (b *DigitalOceanBuffer) listDroplets() ([]godo.Droplet, error) {
 
 	for {
 		droplets, resp, err := b.client.Droplets.List(ctx, pageOpt)
-		logSearchRequest("Droplets", pageOpt, len(droplets), err)
+		b.logSearchRequest("Droplets", pageOpt, len(droplets), err)
 
 		if err != nil {
 			return nil, err
@@ -135,7 +138,7 @@ func (b *DigitalOceanBuffer) prepareDroplets() {
 	counters := make(map[DropletCounter]int)
 
 	droplets, err := b.listDroplets()
-	logLastError(err)
+	b.logLastError(err)
 
 	for _, d := range droplets {
 		c := DropletCounter{
@@ -156,7 +159,7 @@ func (b *DigitalOceanBuffer) listFips() ([]godo.FloatingIP, error) {
 
 	for {
 		fips, resp, err := b.client.FloatingIPs.List(ctx, pageOpt)
-		logSearchRequest("FloatingIPs", pageOpt, len(fips), err)
+		b.logSearchRequest("FloatingIPs", pageOpt, len(fips), err)
 
 		if err != nil {
 			return nil, err
@@ -185,7 +188,7 @@ func (b *DigitalOceanBuffer) prepareFloatingIPs() {
 	counters := make(map[FlipCounter]int)
 
 	floatingIPs, err := b.listFips()
-	logLastError(err)
+	b.logLastError(err)
 
 	for _, fip := range floatingIPs {
 		var status string
@@ -213,7 +216,7 @@ func (b *DigitalOceanBuffer) listLoadBalancers() ([]godo.LoadBalancer, error) {
 
 	for {
 		lbs, resp, err := b.client.LoadBalancers.List(ctx, pageOpt)
-		logSearchRequest("LoadBalancers", pageOpt, len(lbs), err)
+		b.logSearchRequest("LoadBalancers", pageOpt, len(lbs), err)
 
 		if err != nil {
 			return nil, err
@@ -242,7 +245,7 @@ func (b *DigitalOceanBuffer) prepareLoadBalancers() {
 	counters := make(map[LoadBalancerCounter]int)
 
 	loadBallancers, err := b.listLoadBalancers()
-	logLastError(err)
+	b.logLastError(err)
 
 	for _, lb := range loadBallancers {
 		c := LoadBalancerCounter{
@@ -262,7 +265,7 @@ func (b *DigitalOceanBuffer) listTags() ([]godo.Tag, error) {
 
 	for {
 		tags, resp, err := b.client.Tags.List(ctx, pageOpt)
-		logSearchRequest("Tags", pageOpt, len(tags), err)
+		b.logSearchRequest("Tags", pageOpt, len(tags), err)
 
 		if err != nil {
 			return nil, err
@@ -291,7 +294,7 @@ func (b *DigitalOceanBuffer) prepareTags() {
 	counters := make(map[TagCounter]int)
 
 	tags, err := b.listTags()
-	logLastError(err)
+	b.logLastError(err)
 
 	for _, t := range tags {
 		// Note: Currently only Droplets may be tagged.
@@ -315,7 +318,7 @@ func (b *DigitalOceanBuffer) listVolumes() ([]godo.Volume, error) {
 
 	for {
 		volumes, resp, err := b.client.Storage.ListVolumes(ctx, volumeParams)
-		logSearchRequest("Volumes", volumeParams.ListOptions, len(volumes), err)
+		b.logSearchRequest("Volumes", volumeParams.ListOptions, len(volumes), err)
 
 		if err != nil {
 			return nil, err
@@ -344,7 +347,7 @@ func (b *DigitalOceanBuffer) prepareVolumes() {
 	counters := make(map[VolumeCounter]int)
 
 	volumes, err := b.listVolumes()
-	logLastError(err)
+	b.logLastError(err)
 
 	for _, v := range volumes {
 		var status string
@@ -366,31 +369,54 @@ func (b *DigitalOceanBuffer) prepareVolumes() {
 	b.Volumes = counters
 }
 
-func (n *DigitalOceanBuffer) refresh() {
-	logrus.Infoln("Refreshing DigitalOcean data")
+func (b *DigitalOceanBuffer) refresh() {
+	b.refreshID = uuid.NewV4()
+	log := logrus.WithField("refreshID", b.refreshID)
+
+	log.Infoln("Starting DigitalOcean data refresh")
 	startedAt := time.Now()
 
-	n.prepareDroplets()
-	n.prepareFloatingIPs()
-	n.prepareLoadBalancers()
-	n.prepareTags()
-	n.prepareVolumes()
+	b.prepareDroplets()
+	b.prepareFloatingIPs()
+	b.prepareLoadBalancers()
+	b.prepareTags()
+	b.prepareVolumes()
 
 	defer func() {
 		duration := time.Now().Sub(startedAt)
-		logrus.WithFields(logrus.Fields{
-			"duration": duration.String(),
-		}).Infoln("Finished DigitalOcean data refresh")
+		log.WithField("duration", duration.String()).Infoln("Finished DigitalOcean data refresh")
 	}()
 }
 
-func (n *DigitalOceanBuffer) watch() {
-	n.refresh()
+func (b *DigitalOceanBuffer) watch() {
+	b.refresh()
 	for {
 		select {
-		case <-time.After(n.refreshInterval):
-			n.refresh()
+		case <-time.After(b.refreshInterval):
+			b.refresh()
 		}
+	}
+}
+
+func (b *DigitalOceanBuffer) logSearchRequest(resource string, pageOpt *godo.ListOptions, elementsCount int, err error) {
+	log := logrus.WithFields(logrus.Fields{
+		"refreshID": b.refreshID,
+		"page":      pageOpt.Page,
+		"perPage":   pageOpt.PerPage,
+		"found":     elementsCount,
+	})
+
+	message := fmt.Sprintf("Looking for %s", resource)
+	if err == nil {
+		log.Debugln(message)
+	} else {
+		log.WithField("error", err).Warningln(message)
+	}
+}
+
+func (b *DigitalOceanBuffer) logLastError(err error) {
+	if err != nil {
+		logrus.WithField("refreshID", b.refreshID).WithError(err).Errorln("Error while requesting DigitalOcean")
 	}
 }
 
@@ -404,21 +430,4 @@ func NewDigitalOceanBuffer(client *godo.Client, refreshInterval int) *DigitalOce
 	go buffer.watch()
 
 	return buffer
-}
-
-func logSearchRequest(resource string, pageOpt *godo.ListOptions, elementsCount int, err error) {
-	logrus.Debugf(
-		"Looking for %s: page=%d perPage=%d found=%d error=%v",
-		resource,
-		pageOpt.Page,
-		pageOpt.PerPage,
-		elementsCount,
-		err,
-	)
-}
-
-func logLastError(err error) {
-	if err != nil {
-		logrus.WithError(err).Errorln("Error while requesting DigitalOcean")
-	}
 }

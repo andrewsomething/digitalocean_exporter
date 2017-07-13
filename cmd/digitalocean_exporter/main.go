@@ -4,15 +4,18 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/andrewsomething/digitalocean_exporter"
 	"github.com/digitalocean/godo"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/satori/go.uuid"
 	"golang.org/x/oauth2"
 )
 
@@ -42,6 +45,58 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 	}, nil
 }
 
+type Handler struct {
+	metricsHandler    http.Handler
+	metricsPathRegexp *regexp.Regexp
+}
+
+func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	if h.metricsHandler == nil {
+		logrus.Fatalln("metricsHandler is not set")
+	}
+
+	host, _, _ := net.SplitHostPort(r.RemoteAddr)
+	ID := uuid.NewV4()
+
+	logrus.WithFields(logrus.Fields{
+		"requestID":  ID,
+		"host":       host,
+		"method":     r.Method,
+		"requestURI": r.RequestURI,
+		"protocol":   r.Proto,
+		"userAgent":  r.UserAgent(),
+	}).Infoln("Started request")
+
+	startedAt := time.Now()
+	defer func() {
+		duration := time.Now().Sub(startedAt)
+		logrus.WithFields(logrus.Fields{
+			"requestID": ID,
+			"duration":  duration.String(),
+		}).Infoln("Finished request")
+	}()
+
+	if h.metricsPathRegexp.MatchString(r.RequestURI) {
+		h.metricsHandler.ServeHTTP(rw, r)
+	} else {
+		rw.WriteHeader(404)
+		rw.Write([]byte(`<html>
+		<head><title>DigitalOcean Exporter</title></head>
+		<body>
+		<h1>DigitalOcean Exporter</h1>
+		<p><a href='` + *metricsPath + `'>Metrics</a></p>
+		</body>
+		</html>`))
+	}
+}
+
+func newHandler(metricsPath string) *Handler {
+	return &Handler{
+		metricsHandler:    prometheus.Handler(),
+		metricsPathRegexp: regexp.MustCompile(fmt.Sprintf("^%s$", metricsPath)),
+	}
+}
+
 func main() {
 	flag.Parse()
 	if *versionFlag {
@@ -50,7 +105,7 @@ func main() {
 	}
 
 	if *apiToken == "" {
-		log.Fatal("A DigitalOcean API token must be specified with '-token' flag")
+		logrus.Fatalln("A DigitalOcean API token must be specified with '-token' flag")
 	}
 
 	if *debug {
@@ -68,20 +123,8 @@ func main() {
 	newExporter := digitaloceanexporter.New(digitalOceanService)
 	prometheus.MustRegister(newExporter)
 
-	http.Handle(*metricsPath, prometheus.Handler())
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
-		<head><title>DigitalOcean Exporter</title></head>
-		<body>
-		<h1>DigitalOcean Exporter</h1>
-		<p><a href='` + *metricsPath + `'>Metrics</a></p>
-		</body>
-		</html>`))
-	})
-
-	log.Printf("starting DigitalOcean exporter on %q", *listenAddr)
-
-	if err := http.ListenAndServe(*listenAddr, nil); err != nil {
-		log.Fatalf("cannot start DigitalOcean exporter: %s", err)
+	logrus.Printf("Starting DigitalOcean exporter on %q", *listenAddr)
+	if err := http.ListenAndServe(*listenAddr, newHandler(*metricsPath)); err != nil {
+		logrus.Fatalf("Cannot start DigitalOcean exporter: %s", err)
 	}
 }
