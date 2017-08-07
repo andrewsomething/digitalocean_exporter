@@ -49,7 +49,11 @@ func main() {
 	}
 
 	if *apiToken == "" {
-		log.Fatal("A DigitalOcean API token must be specified with '-token' flag")
+		token := os.Getenv("DIGITALOCEAN_TOKEN")
+		if token == "" {
+			log.Fatal("A DigitalOcean API token must be specified with '-token' flag or with DIGITALOCEAN_TOKEN environment variable")
+		}
+		*apiToken = token
 	}
 
 	if *debug {
