@@ -105,7 +105,11 @@ func main() {
 	}
 
 	if *apiToken == "" {
-		logrus.Fatalln("A DigitalOcean API token must be specified with '-token' flag")
+		token := os.Getenv("DIGITALOCEAN_TOKEN")
+		if token == "" {
+			logrus.Fatalln("A DigitalOcean API token must be specified with '-token' flag or with DIGITALOCEAN_TOKEN environment variable")
+		}
+		*apiToken = token
 	}
 
 	if *debug {
