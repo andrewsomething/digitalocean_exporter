@@ -17,6 +17,10 @@ end point. A DigitalOcean API token is also required. It is recommended
 to use a read-only token as `digitalocean_exporter` has no need for write
 access to your account.
 
+As calls to the DigitalOcean API can be expensive, `digitalocean_exporter`
+maintains a local cache that is periodically refreshed based on the
+`refresh-interval` value provided. The default is every 60 seconds.
+
 ```
 $ ./digitalocean_exporter -help
 Usage of ./digitalocean_exporter:
