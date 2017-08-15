@@ -18,14 +18,19 @@ to use a read-only token as `digitalocean_exporter` has no need for write
 access to your account.
 
 ```
-$ ./digitalocean_exporter
+$ ./digitalocean_exporter -help
 Usage of ./digitalocean_exporter:
+  -debug
+        Print debug logs
   -listen string
         Listen address for DigitalOcean exporter (default "localhost:9292")
   -metrics-path string
         URL path for surfacing metrics (default "/metrics")
+  -refresh-interval int
+        Interval (in seconds) between subsequent requests against DigitalOcean API (default 60)
   -token string
         DigitalOcean API token (read-only)
+  -v    Prints current digitalocean_exporter version
 ```
 
 ## Metrics
