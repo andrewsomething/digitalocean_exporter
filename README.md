@@ -54,6 +54,15 @@ digitalocean_droplets_count{region="nyc3",size="512mb",status="off"} 1
 # TYPE digitalocean_floating_ips_count gauge
 digitalocean_floating_ips_count{region="nyc3",status="assigned"} 1
 digitalocean_floating_ips_count{region="nyc3",status="unassigned"} 1
+# HELP digitalocean_load_balancers_count Number of Load Balancers by region and status.
+# TYPE digitalocean_load_balancers_count gauge
+digitalocean_load_balancers_count{region="nyc3",status="active"} 1
+# HELP digitalocean_tags_count Count of tagged resources by name and resource type.
+# TYPE digitalocean_tags_count gauge
+digitalocean_tags_count{name="frontend",resource_type="droplets"} 0
+digitalocean_tags_count{name="production",resource_type="droplets"} 7
+digitalocean_tags_count{name="prometheus",resource_type="droplets"} 1
+digitalocean_tags_count{name="swarm",resource_type="droplets"} 2
 # HELP digitalocean_volumes_count Number of Volumes by region, size in GiB, and status.
 # TYPE digitalocean_volumes_count gauge
 digitalocean_volumes_count{region="fra1",size="100",status="unattached"} 1
