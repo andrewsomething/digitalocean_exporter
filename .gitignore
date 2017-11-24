@@ -27,3 +27,6 @@ _testmain.go
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Ignore the vendor dir and let it be installed via dep ensure.
+vendor/
