@@ -56,7 +56,7 @@ func (h *Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	host, _, _ := net.SplitHostPort(r.RemoteAddr)
-	ID := uuid.NewV4()
+	ID, _ := uuid.NewV4()
 
 	logrus.WithFields(logrus.Fields{
 		"requestID":  ID,

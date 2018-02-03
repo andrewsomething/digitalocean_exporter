@@ -373,7 +373,7 @@ func (b *DigitalOceanBuffer) prepareVolumes() {
 }
 
 func (b *DigitalOceanBuffer) refresh() {
-	b.refreshID = uuid.NewV4()
+	b.refreshID, _ = uuid.NewV4()
 	log := logrus.WithField("refreshID", b.refreshID)
 
 	log.Infoln("Starting DigitalOcean data refresh")
