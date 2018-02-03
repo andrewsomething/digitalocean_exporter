@@ -37,7 +37,7 @@ func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 		Droplets: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "droplets", "count"),
 			"Number of Droplets by region, size, and status.",
-			[]string{"region", "size", "status"},
+			[]string{"region", "size", "status", "tags"},
 			nil,
 		),
 		FloatingIPs: prometheus.NewDesc(
@@ -88,6 +88,7 @@ func (c *DigitalOceanCollector) collectDropletCounts(ch chan<- prometheus.Metric
 			d.region,
 			d.size,
 			d.status,
+			d.tags,
 		)
 	}
 }
