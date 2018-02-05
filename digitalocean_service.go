@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -25,6 +26,7 @@ type DropletCounter struct {
 	status string
 	region string
 	size   string
+	tags   string
 }
 
 // FlipCounter is a struct holding information about a Floating IP.
@@ -145,6 +147,7 @@ func (b *DigitalOceanBuffer) prepareDroplets() {
 			d.Status,
 			d.Region.Slug,
 			d.Size.Slug,
+			strings.Join(d.Tags, ","),
 		}
 		counters[c]++
 	}
@@ -370,7 +373,7 @@ func (b *DigitalOceanBuffer) prepareVolumes() {
 }
 
 func (b *DigitalOceanBuffer) refresh() {
-	b.refreshID = uuid.NewV4()
+	b.refreshID, _ = uuid.NewV4()
 	log := logrus.WithField("refreshID", b.refreshID)
 
 	log.Infoln("Starting DigitalOcean data refresh")
