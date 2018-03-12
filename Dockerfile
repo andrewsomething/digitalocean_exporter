@@ -8,8 +8,11 @@ RUN apk add -U ca-certificates
 
 COPY . .
 RUN apk add --no-cache git && \
+    go get -u -v github.com/golang/dep/cmd/dep && \
+    dep ensure && \
     go get -v ./cmd/digitalocean_exporter && \
     which digitalocean_exporter && \
+    go clean -v -i github.com/golang/dep/cmd/dep... && \
     apk del git
 
 ENTRYPOINT ["/go/bin/digitalocean_exporter", "-listen", "0.0.0.0:9292"]
