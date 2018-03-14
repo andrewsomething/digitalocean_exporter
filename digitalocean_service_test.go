@@ -18,23 +18,23 @@ func TestDroplets(t *testing.T) {
 		expected map[DropletCounter]int
 	}{
 		{`{"droplets": [
-        {"status":"active", "size":{"slug":"1gb"}, "region":{"slug":"nyc3"}},
-        {"status":"active", "size":{"slug":"1gb"}, "region":{"slug":"nyc3"}}]}`,
-			map[DropletCounter]int{DropletCounter{status: "active", size: "1gb", region: "nyc3"}: 2}},
+        {"status":"active", "size":{"slug":"1gb", "price_hourly": 0.014880, "price_monthly": 5.0}, "region":{"slug":"nyc3"}},
+        {"status":"active", "size":{"slug":"1gb", "price_hourly": 0.014880, "price_monthly": 5.0}, "region":{"slug":"nyc3"}}]}`,
+			map[DropletCounter]int{DropletCounter{status: "active", size: "1gb", region: "nyc3", price_hourly: 0.014880, price_monthly: 5.0}: 2}},
 		{`{"droplets": [
-        {"status":"active", "size":{"slug":"1gb"}, "region":{"slug":"nyc3"}},
-        {"status":"active", "size":{"slug":"1gb"}, "region":{"slug":"nyc3"}},
-        {"status":"active", "size":{"slug":"2gb"}, "region":{"slug":"nyc3"}}]}`,
-			map[DropletCounter]int{DropletCounter{status: "active", size: "1gb", region: "nyc3"}: 2,
-				DropletCounter{status: "active", size: "2gb", region: "nyc3"}: 1}},
+        {"status":"active", "size":{"slug":"1gb", "price_hourly": 0.014880, "price_monthly": 5.0}, "region":{"slug":"nyc3"}},
+        {"status":"active", "size":{"slug":"1gb", "price_hourly": 0.014880, "price_monthly": 5.0}, "region":{"slug":"nyc3"}},
+        {"status":"active", "size":{"slug":"2gb", "price_hourly": 0.029760, "price_monthly": 20.0}, "region":{"slug":"nyc3"}}]}`,
+			map[DropletCounter]int{DropletCounter{status: "active", size: "1gb", region: "nyc3", price_hourly: 0.014880, price_monthly: 5.0}: 2,
+				DropletCounter{status: "active", size: "2gb", region: "nyc3", price_hourly: 0.029760, price_monthly: 20.0}: 1}},
 		{`{"droplets": [
-        {"status":"active", "size":{"slug":"1gb"}, "region":{"slug":"nyc3"}},
-        {"status":"active", "size":{"slug":"1gb"}, "region":{"slug":"nyc3"}},
-        {"status":"active", "size":{"slug":"1gb"}, "region":{"slug":"nyc2"}},
-        {"status":"active", "size":{"slug":"2gb"}, "region":{"slug":"nyc3"}}]}`,
-			map[DropletCounter]int{DropletCounter{status: "active", size: "1gb", region: "nyc3"}: 2,
-				DropletCounter{status: "active", size: "1gb", region: "nyc2"}: 1,
-				DropletCounter{status: "active", size: "2gb", region: "nyc3"}: 1}},
+        {"status":"active", "size":{"slug":"1gb", "price_hourly": 0.014880, "price_monthly": 5.0}, "region":{"slug":"nyc3"}},
+        {"status":"active", "size":{"slug":"1gb", "price_hourly": 0.014880, "price_monthly": 5.0}, "region":{"slug":"nyc3"}},
+        {"status":"active", "size":{"slug":"1gb", "price_hourly": 0.014880, "price_monthly": 5.0}, "region":{"slug":"nyc2"}},
+        {"status":"active", "size":{"slug":"2gb", "price_hourly": 0.029760, "price_monthly": 20.0}, "region":{"slug":"nyc3"}}]}`,
+			map[DropletCounter]int{DropletCounter{status: "active", size: "1gb", region: "nyc3", price_hourly: 0.014880, price_monthly: 5.0}: 2,
+				DropletCounter{status: "active", size: "1gb", region: "nyc2", price_hourly: 0.014880, price_monthly: 5.0}:  1,
+				DropletCounter{status: "active", size: "2gb", region: "nyc3", price_hourly: 0.029760, price_monthly: 20.0}: 1}},
 	}
 
 	for _, tt := range dropletTests {
