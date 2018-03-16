@@ -1,6 +1,7 @@
 package digitaloceanexporter
 
 import (
+	"time"
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -15,6 +16,8 @@ type DigitalOceanSource interface {
 	LoadBalancers() map[LoadBalancerCounter]int
 	Tags() map[TagCounter]int
 	Volumes() map[VolumeCounter]int
+
+	QueryDuration() time.Duration
 }
 
 // A DigitalOceanCollector is a Prometheus collector for metrics regarding
@@ -25,6 +28,8 @@ type DigitalOceanCollector struct {
 	LoadBalancers *prometheus.Desc
 	Tags          *prometheus.Desc
 	Volumes       *prometheus.Desc
+
+	QueryDuration *prometheus.Desc
 
 	dos DigitalOceanSource
 }
@@ -67,6 +72,13 @@ func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 			nil,
 		),
 
+		QueryDuration: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "query_duration", "seconds"),
+			"Time elapsed while querying the DigitalOcean API in seconds.",
+			[]string{},
+			nil,
+		),
+
 		dos: dos,
 	}
 }
@@ -79,6 +91,8 @@ func (c *DigitalOceanCollector) collect(ch chan<- prometheus.Metric) {
 	c.collectLoadBalancerCounts(ch)
 	c.collectTagCounts(ch)
 	c.collectVolumeCounts(ch)
+
+	c.collectQueryDuration(ch)
 }
 
 func (c *DigitalOceanCollector) collectDropletCounts(ch chan<- prometheus.Metric) {
@@ -144,6 +158,14 @@ func (c *DigitalOceanCollector) collectVolumeCounts(ch chan<- prometheus.Metric)
 			v.status,
 		)
 	}
+}
+
+func (c *DigitalOceanCollector) collectQueryDuration(ch chan<- prometheus.Metric) {
+	ch <- prometheus.MustNewConstMetric(
+		c.QueryDuration,
+		prometheus.GaugeValue,
+		c.dos.QueryDuration().Seconds(),
+	)
 }
 
 // Describe sends the descriptors of each metric over to the provided channel.

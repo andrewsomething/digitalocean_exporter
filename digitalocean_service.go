@@ -88,6 +88,11 @@ func (s *DigitalOceanService) Volumes() map[VolumeCounter]int {
 	return s.Buffer.Volumes
 }
 
+// QueryDuration reports the time elapsed while querying the DigitalOcean API.
+func (s *DigitalOceanService) QueryDuration() time.Duration {
+	return s.Buffer.QueryDuration
+}
+
 func NewDigitalOceanService(buffer *DigitalOceanBuffer) *DigitalOceanService {
 	return &DigitalOceanService{
 		Buffer: buffer,
@@ -104,6 +109,8 @@ type DigitalOceanBuffer struct {
 	LoadBalancers map[LoadBalancerCounter]int
 	Tags          map[TagCounter]int
 	Volumes       map[VolumeCounter]int
+
+	QueryDuration time.Duration
 }
 
 func (b *DigitalOceanBuffer) listDroplets() ([]godo.Droplet, error) {
@@ -391,6 +398,7 @@ func (b *DigitalOceanBuffer) refresh() {
 
 	defer func() {
 		duration := time.Now().Sub(startedAt)
+		b.QueryDuration = duration
 		log.WithField("duration", duration.String()).Infoln("Finished DigitalOcean data refresh")
 	}()
 }
