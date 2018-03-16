@@ -61,6 +61,9 @@ digitalocean_floating_ips_count{region="nyc3",status="unassigned"} 1
 # HELP digitalocean_load_balancers_count Number of Load Balancers by region and status.
 # TYPE digitalocean_load_balancers_count gauge
 digitalocean_load_balancers_count{region="nyc3",status="active"} 1
+# HELP digitalocean_query_duration_seconds Time elapsed while querying the DigitalOcean API in seconds.
+# TYPE digitalocean_query_duration_seconds gauge
+digitalocean_query_duration_seconds 4.806081399
 # HELP digitalocean_tags_count Count of tagged resources by name and resource type.
 # TYPE digitalocean_tags_count gauge
 digitalocean_tags_count{name="frontend",resource_type="droplets"} 0
