@@ -38,6 +38,17 @@ Usage of ./digitalocean_exporter:
   -v    Prints current digitalocean_exporter version
 ```
 
+### Docker
+
+This exporter is also available as a Docker image: [`andrewsomething/digitalocean_exporter`](https://hub.docker.com/r/andrewsomething/digitalocean_exporter/)
+
+Example usage:
+
+```
+$ docker run -p 127.0.0.1:9292:9292 andrewsomething/digitalocean_exporter \
+    -listen 0.0.0.0:9292 -token $DIGITALOCEAN_API_TOKEN
+```
+
 ## Metrics
 
 Here is an example of the metrics exposed by `digitalocean_exporter`:
