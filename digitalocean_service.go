@@ -23,10 +23,12 @@ type DigitalOceanService struct {
 
 // DropletCounter is a struct holding information about a Droplet.
 type DropletCounter struct {
-	status string
-	region string
-	size   string
-	tags   string
+	status        string
+	region        string
+	size          string
+	price_hourly  float64
+	price_monthly float64
+	tags          string
 }
 
 // FlipCounter is a struct holding information about a Floating IP.
@@ -154,6 +156,8 @@ func (b *DigitalOceanBuffer) prepareDroplets() {
 			d.Status,
 			d.Region.Slug,
 			d.Size.Slug,
+			d.Size.PriceHourly,
+			d.Size.PriceMonthly,
 			strings.Join(d.Tags, ","),
 		}
 		counters[c]++

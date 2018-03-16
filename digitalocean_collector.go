@@ -2,6 +2,7 @@ package digitaloceanexporter
 
 import (
 	"time"
+	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -43,7 +44,7 @@ func NewDigitalOceanCollector(dos DigitalOceanSource) *DigitalOceanCollector {
 		Droplets: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "droplets", "count"),
 			"Number of Droplets by region, size, and status.",
-			[]string{"region", "size", "status", "tags"},
+			[]string{"region", "size", "status", "price_hourly", "price_monthly", "tags"},
 			nil,
 		),
 		FloatingIPs: prometheus.NewDesc(
@@ -103,6 +104,8 @@ func (c *DigitalOceanCollector) collectDropletCounts(ch chan<- prometheus.Metric
 			d.region,
 			d.size,
 			d.status,
+			strconv.FormatFloat(d.price_hourly, 'f', 6, 64),
+			strconv.FormatFloat(d.price_monthly, 'f', 2, 64),
 			d.tags,
 		)
 	}
