@@ -1,6 +1,3 @@
-**You may want to consider using [github.com/metalmatze/digitalocean_exporter](https://github.com/metalmatze/digitalocean_exporter). It is more fully featured than this project at this point.**
-
-
 # digitalocean_exporter
 [![Build Status](https://travis-ci.org/andrewsomething/digitalocean_exporter.svg)](https://travis-ci.org/andrewsomething/digitalocean_exporter) [![Go Report Card](https://goreportcard.com/badge/github.com/andrewsomething/digitalocean_exporter)](https://goreportcard.com/report/github.com/andrewsomething/digitalocean_exporter) [![Docker Build Status](https://img.shields.io/docker/build/andrewsomething/digitalocean_exporter.svg)](https://hub.docker.com/r/andrewsomething/digitalocean_exporter/)
 
@@ -10,6 +7,8 @@ Initially written as a way to explore Prometheus exporters, I am sharing
 it in the hope that it will be useful to others. Matt Layher's
 [`rtorrent_exporter`](https://github.com/mdlayher/rtorrent_exporter) was
 a great help.
+
+**You may want to consider using [github.com/metalmatze/digitalocean_exporter](https://github.com/metalmatze/digitalocean_exporter). It is a more active project than this one.**
 
 ## Usage
 
